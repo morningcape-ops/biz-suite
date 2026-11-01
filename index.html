@@ -54,10 +54,10 @@ textarea{resize:vertical}
 .search-box::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;pointer-events:none}
 
 /* ── Tabs ── */
-.tab-bar{background:var(--bg-tab);display:flex;gap:4px;padding:6px 24px;flex-shrink:0;overflow-x:auto}
-.tab-btn{padding:7px 18px;border-radius:20px;font-weight:500;font-size:13px;white-space:nowrap;color:rgba(255,255,255,.55);background:transparent;transition:all .15s;letter-spacing:.01em}
-.tab-btn:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.85)}
-.tab-btn.active{background:var(--bg-header);color:#fff;font-weight:600}
+.tab-bar{background:var(--bg);display:flex;gap:6px;padding:10px 24px;flex-shrink:0;overflow-x:auto;border-bottom:1px solid var(--border)}
+.tab-btn{padding:8px 20px;border-radius:20px;font-weight:500;font-size:13px;white-space:nowrap;color:var(--fg);background:transparent;border:1.5px solid var(--border);transition:all .15s;letter-spacing:.01em}
+.tab-btn:hover{background:var(--accent-light);border-color:var(--accent)}
+.tab-btn.active{background:var(--bg-header);color:#fff;font-weight:600;border-color:var(--bg-header)}
 
 /* ── Content ── */
 .content{flex:1;overflow-y:auto;padding:16px 24px 24px}
@@ -97,7 +97,7 @@ textarea{resize:vertical}
 
 /* ── Eisenhower Matrix ── */
 .matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
-.quadrant{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;min-height:140px;border-left:4px solid var(--border)}
+.quadrant{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;min-height:150px;border-left:4px solid var(--border)}
 .quadrant[data-q="1"]{border-left-color:var(--q1)}
 .quadrant[data-q="2"]{border-left-color:var(--q2)}
 .quadrant[data-q="3"]{border-left-color:var(--q3)}
@@ -112,10 +112,10 @@ textarea{resize:vertical}
 .q-count{margin-left:auto;font-size:12px;color:var(--fg-muted);font-family:var(--mono)}
 .q-list{display:flex;flex-direction:column;gap:3px}
 
-.ti{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);font-size:13px;transition:opacity .15s}
+.ti{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);background:var(--bg);font-size:13px;transition:opacity .15s}
 .ti.done{opacity:.4}
 .ti.done .ti-text{text-decoration:line-through}
-.ti-check{width:15px;height:15px;accent-color:var(--accent);flex-shrink:0}
+.ti-check{width:18px;height:18px;accent-color:var(--q1);flex-shrink:0;cursor:pointer}
 .ti-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ti-due{font-size:11px;color:var(--fg-muted);font-family:var(--mono);flex-shrink:0}
 .ti-due.overdue{color:var(--danger);font-weight:600}
@@ -128,12 +128,24 @@ textarea{resize:vertical}
 .summary-header .icon{font-size:16px}
 .summary-header .title{font-size:13px;font-weight:600}
 .summary-header .copy-btn{margin-left:auto;display:flex;gap:6px;align-items:center}
-.summary-header .copy-btn button{padding:5px 14px;border-radius:var(--r);font-size:12px;font-weight:600}
+.summary-header .copy-btn button{padding:5px 14px;border-radius:var(--r);font-size:12px;font-weight:600;background:var(--bg-header);color:#fff;border:none}
+.summary-header .copy-btn button:hover{opacity:.85}
 .summary-body{display:flex;gap:24px;align-items:center}
-.summary-text{flex:1;font-size:13px;line-height:1.8;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px}
-.summary-chart{width:140px;height:140px;flex-shrink:0;position:relative}
-.summary-chart canvas{width:100%!important;height:100%!important}
-.summary-pct{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px;font-weight:700;font-family:var(--mono);color:var(--fg)}
+.summary-left{flex:1;display:flex;flex-direction:column;gap:12px}
+.summary-text{font-size:13px;line-height:1.8;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px}
+.summary-bar{display:flex;flex-direction:column;gap:6px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.bar-label{width:50px;text-align:right;color:var(--fg-muted);font-weight:500}
+.bar-track{flex:1;height:22px;background:var(--bg);border-radius:4px;overflow:hidden;display:flex;position:relative}
+.bar-fill{height:100%;transition:width .3s}
+.bar-fill.done{background:var(--bg-header)}
+.bar-fill.undone{background:var(--warn)}
+.bar-count{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:600;color:var(--fg);font-family:var(--mono)}
+.summary-gauge{width:140px;flex-shrink:0;display:flex;flex-direction:column;align-items:center}
+.gauge-wrap{width:140px;height:80px;position:relative;overflow:hidden}
+.gauge-wrap canvas{width:140px!important;height:140px!important;position:absolute;top:0;left:0}
+.gauge-pct{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:700;font-family:var(--mono);color:var(--fg)}
+.gauge-label{font-size:11px;color:var(--fg-muted);margin-top:4px}
 
 /* ── Pomodoro ── */
 .pomo-display{text-align:center;padding:28px 0}
@@ -174,7 +186,9 @@ textarea{resize:vertical}
   .exp-grid{grid-template-columns:1fr}
   .task-input-bar input[type="text"]{min-width:0;width:100%}
   .summary-body{flex-direction:column}
-  .summary-chart{width:120px;height:120px}
+  .summary-gauge{width:120px}
+  .gauge-wrap{width:120px;height:68px}
+  .gauge-wrap canvas{width:120px!important;height:120px!important}
 }
 </style>
 </head>
@@ -447,34 +461,59 @@ function renderWeeklySummary(){
   const total=doneCount+notDoneCount;
   const pct=total>0?Math.round(doneCount/total*100):0;
 
+  const barTotal=Math.max(doneCount+notDoneCount,1);
+  const donePct2=Math.round(doneCount/barTotal*100);
+  const undonePct2=100-donePct2;
+
   document.getElementById('weeklySummary').innerHTML=`
     <div class="summary-header">
       <span class="icon">📊</span>
       <span class="title">週次サマリー（直近7日・自動生成）</span>
       <div class="copy-btn">
-        <button class="btn-outline btn-sm" onclick="copySummary()" title="クリップボードにコピー">📋</button>
-        <button class="btn-outline btn-sm" onclick="copySummary()">コピー</button>
+        <button onclick="copySummary()">コピー</button>
       </div>
     </div>
     <div class="summary-body">
-      <div class="summary-text" id="summaryText">
-        【週次サマリー（タスク）】${weekStr}<br><br>
-        ■ 完了：${doneCount}件<br>
-        ■ 未完了：${notDoneCount}件${overdue.length>0?`（うち期限切れ ${overdue.length}件）`:''}<br>
+      <div class="summary-left">
+        <div class="summary-text" id="summaryText">
+          【週次サマリー（タスク）】${weekStr}<br><br>
+          ■ 完了：${doneCount}件<br>
+          ■ 未完了：${notDoneCount}件${overdue.length>0?`（うち期限切れ ${overdue.length}件）`:''}<br>
+        </div>
+        <div class="summary-bar">
+          <div class="bar-row">
+            <span class="bar-label">完了</span>
+            <div class="bar-track">
+              <div class="bar-fill done" style="width:${donePct2}%"></div>
+              <span class="bar-count">${doneCount}件</span>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">未完了</span>
+            <div class="bar-track">
+              <div class="bar-fill undone" style="width:${undonePct2}%"></div>
+              <span class="bar-count">${notDoneCount}件</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="summary-chart">
-        <canvas id="summaryCanvas"></canvas>
-        <div class="summary-pct">${pct}%</div>
+      <div class="summary-gauge">
+        <div class="gauge-wrap"><canvas id="summaryCanvas"></canvas><div class="gauge-pct">${pct}%</div></div>
+        <div class="gauge-label">完了率</div>
       </div>
     </div>`;
 
   if(summaryChart)summaryChart.destroy();
   const ctx=document.getElementById('summaryCanvas');
   if(ctx){
+    const s=getComputedStyle(document.documentElement);
+    const accentC=s.getPropertyValue('--bg-header').trim()||'#1a2332';
+    const warnC=s.getPropertyValue('--warn').trim()||'#d97706';
+    const borderC=s.getPropertyValue('--border').trim()||'#d1d5db';
     summaryChart=new Chart(ctx,{
       type:'doughnut',
-      data:{labels:['完了','未完了'],datasets:[{data:[doneCount,notDoneCount],backgroundColor:['var(--accent)','var(--warn)'],borderWidth:0}]},
-      options:{responsive:true,cutout:'70%',plugins:{legend:{display:false}}}
+      data:{labels:['完了','未完了'],datasets:[{data:[doneCount||0,notDoneCount||0],backgroundColor:[accentC,warnC],borderWidth:0}]},
+      options:{responsive:false,rotation:-90,circumference:180,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}
     });
   }
 }
