@@ -6,6 +6,8 @@
 <title>業務効率化スイート</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 :root {
   --bg: #f0f1f3; --bg-card: #ffffff; --bg-header: #1a2332; --bg-tab: #243040;
@@ -171,6 +173,25 @@ textarea{resize:vertical}
 .chart-wrap{max-width:280px;margin:0 auto}
 .exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
+/* ── Import/Export Toolbar ── */
+.io-bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:0 2px}
+.io-bar .btn-io{display:inline-flex;align-items:center;gap:4px;padding:6px 14px;border-radius:var(--r);font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--bg-card);color:var(--fg);cursor:pointer;transition:all .12s}
+.io-bar .btn-io:hover{background:var(--accent-light);border-color:var(--accent)}
+.io-bar .btn-io.primary{background:var(--bg-header);color:#fff;border-color:var(--bg-header)}
+.io-bar .btn-io.primary:hover{opacity:.85}
+.io-bar .io-label{font-size:12px;color:var(--fg-muted);font-weight:500}
+.io-bar .io-sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+
+/* ── PDF Drop Zone ── */
+.pdf-drop{border:2px dashed var(--border);border-radius:var(--r);padding:24px;text-align:center;color:var(--fg-muted);font-size:13px;transition:all .15s;cursor:pointer;margin-bottom:12px}
+.pdf-drop:hover,.pdf-drop.dragover{border-color:var(--accent);background:var(--accent-light);color:var(--fg)}
+.pdf-drop .drop-icon{font-size:28px;margin-bottom:6px}
+.pdf-drop .drop-hint{font-size:11px;margin-top:4px}
+.pdf-result{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.pdf-result .pr-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.pdf-task-preview{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);background:var(--bg);font-size:12px;margin-bottom:4px}
+.pdf-task-preview .ptq{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;color:#fff;flex-shrink:0}
+
 /* ── Footer ── */
 .app-footer{font-size:11px;color:var(--fg-muted);padding:8px 24px 12px;text-align:center;line-height:1.6;flex-shrink:0}
 
@@ -242,6 +263,22 @@ textarea{resize:vertical}
       <button class="btn-outline btn-sm" onclick="clearAll()">すべて削除</button>
       <button class="notify-btn" onclick="toggleNotify()"><span class="bell">🔔</span> <span id="notifyLabel">通知ON</span></button>
     </div>
+    <div class="io-bar">
+      <span class="io-label">入出力:</span>
+      <button class="btn-io" onclick="exportExcel()">📥 Excel出力</button>
+      <button class="btn-io" onclick="exportCSV()">📥 CSV出力</button>
+      <div class="io-sep"></div>
+      <button class="btn-io primary" onclick="document.getElementById('fileImport').click()">📤 Excel/CSV取込</button>
+      <input type="file" id="fileImport" accept=".xlsx,.xls,.csv" style="display:none" onchange="importFile(event)">
+      <button class="btn-io primary" onclick="document.getElementById('pdfImport').click()">📄 PDF取込→自動振分</button>
+      <input type="file" id="pdfImport" accept=".pdf" style="display:none" onchange="importPDF(event)">
+    </div>
+    <div class="pdf-drop" id="pdfDrop" onclick="document.getElementById('pdfImport').click()">
+      <div class="drop-icon">📄</div>
+      PDFをドラッグ＆ドロップ、またはクリックしてアップロード<br>
+      <span class="drop-hint">テキストPDFからタスクを自動抽出し、キーワードで象限に振り分けます</span>
+    </div>
+    <div id="pdfResult"></div>
     <div class="matrix" id="matrix">
       <div class="quadrant" data-q="1">
         <div class="q-header"><span class="q-title">今すぐやる</span><span class="q-badge" data-q="1">緊急 × 重要</span><span class="q-count" id="qc1"></span></div>
@@ -751,6 +788,185 @@ function renderProjects(){
       <button class="ti-del" onclick="deleteProject(${p.id})">&times;</button>
     </div>`).join('');
 }
+
+// === Import/Export ===
+const QUAD_NAMES={'1':'緊急×重要','2':'重要のみ','3':'緊急のみ','4':'どちらでもない'};
+const QUAD_COLORS={'1':'var(--q1)','2':'var(--q2)','3':'var(--q3)','4':'var(--q4)'};
+
+function exportExcel(){
+  const rows=tasks.map(t=>({
+    タスク:t.text, 象限:QUAD_NAMES[t.quad]||'', 期限:t.due||'', 重要度:t.priority||'',
+    完了:t.done?'○':'', 完了日:t.doneAt?t.doneAt.slice(0,10):'', 作成日:t.created?t.created.slice(0,10):''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:30},{wch:12},{wch:12},{wch:8},{wch:4},{wch:12},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'タスク');
+  XLSX.writeFile(wb,'タスク一覧_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+function exportCSV(){
+  const rows=tasks.map(t=>({
+    タスク:t.text, 象限:QUAD_NAMES[t.quad]||'', 期限:t.due||'', 重要度:t.priority||'',
+    完了:t.done?'○':'', 完了日:t.doneAt?t.doneAt.slice(0,10):'', 作成日:t.created?t.created.slice(0,10):''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const csv=XLSX.utils.sheet_to_csv(ws);
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='タスク一覧_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+function importFile(ev){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const data=new Uint8Array(e.target.result);
+    const wb=XLSX.read(data,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws);
+    let count=0;
+    const quadMap={'緊急×重要':'1','重要のみ':'2','緊急のみ':'3','どちらでもない':'4'};
+    rows.forEach(r=>{
+      const text=(r['タスク']||r['task']||r['タイトル']||r['title']||'').toString().trim();
+      if(!text)return;
+      const quadStr=(r['象限']||r['quad']||'').toString().trim();
+      const quad=quadMap[quadStr]||r['quad']||'2';
+      const due=(r['期限']||r['due']||'').toString().trim();
+      const pri=(r['重要度']||r['priority']||'mid').toString().trim();
+      const done=(r['完了']||'').toString().trim()==='○';
+      tasks.unshift({
+        id:Date.now()+count, text, quad, due, priority:pri, done,
+        repeat:'', created:new Date().toISOString(),
+        ...(done?{doneAt:new Date().toISOString()}:{})
+      });
+      count++;
+    });
+    save('tasks',tasks);renderTasks();
+    ev.target.value='';
+    alert(count+'件のタスクを取り込みました');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// PDF auto-classification
+const Q_KEYWORDS={
+  '1':['至急','緊急','期限','締切','今日中','本日中','直ちに','即座','速やか','急ぎ','重大','事故','違反','苦情','クレーム'],
+  '2':['計画','検討','準備','改善','企画','提案','研修','教育','更新','見直し','方針','予算','目標','報告書'],
+  '3':['対応','処理','連絡','返信','確認','伝達','手配','発注','届出','提出','電話','メール','FAX'],
+};
+
+function classifyText(text){
+  let scores={'1':0,'2':0,'3':0,'4':0};
+  for(const[q,kws]of Object.entries(Q_KEYWORDS)){
+    kws.forEach(kw=>{if(text.includes(kw))scores[q]+=2});
+  }
+  let best='4',bestScore=0;
+  for(const[q,sc]of Object.entries(scores)){
+    if(sc>bestScore){bestScore=sc;best=q}
+  }
+  return best;
+}
+
+function extractTaskLines(text){
+  const lines=text.split(/\n/).map(l=>l.trim()).filter(l=>l.length>=4&&l.length<=200);
+  const taskLines=[];
+  const bulletRe=/^[\-・●○▶▷►☑☐✓✔□■◆◇★☆①②③④⑤⑥⑦⑧⑨⑩\d]+[\.\)）\s]/;
+  const skipRe=/^(ページ|page|copyright|http|www\.|tel|fax|〒|\d{4}年\d+月\d+日$)/i;
+  lines.forEach(l=>{
+    if(skipRe.test(l))return;
+    const stripped=l.replace(bulletRe,'').trim();
+    if(stripped.length<4)return;
+    if(bulletRe.test(l)||/[。！？]$/.test(l)||/ください|こと$|する$|した$|します|される|必要/.test(l)){
+      taskLines.push(stripped);
+    }
+  });
+  if(taskLines.length===0){
+    lines.filter(l=>!skipRe.test(l)&&l.length>=6&&l.length<=100).slice(0,20).forEach(l=>taskLines.push(l));
+  }
+  return [...new Set(taskLines)].slice(0,30);
+}
+
+async function importPDF(ev){
+  const file=ev.target.files[0];if(!file)return;
+  ev.target.value='';
+  const resultDiv=document.getElementById('pdfResult');
+  resultDiv.innerHTML='<div class="pdf-result"><div class="pr-title">📄 PDF解析中...</div></div>';
+
+  try{
+    const arrayBuf=await file.arrayBuffer();
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const pdf=await pdfjsLib.getDocument({data:arrayBuf}).promise;
+    let fullText='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const tc=await page.getTextContent();
+      fullText+=tc.items.map(it=>it.str).join(' ')+'\n';
+    }
+
+    const taskLines=extractTaskLines(fullText);
+    if(taskLines.length===0){
+      resultDiv.innerHTML='<div class="pdf-result"><div class="pr-title">⚠ タスクとして抽出できる行が見つかりませんでした</div><div style="font-size:12px;color:var(--fg-muted);margin-top:6px">スキャンPDF（画像PDF）はテキスト抽出できません</div></div>';
+      return;
+    }
+
+    const classified=taskLines.map(line=>({text:line,quad:classifyText(line)}));
+    let previewHtml=classified.map(c=>{
+      const qName=QUAD_NAMES[c.quad];
+      const bgMap={'1':'var(--q1)','2':'var(--q2)','3':'var(--q3)','4':'var(--q4)'};
+      return `<div class="pdf-task-preview">
+        <span class="ptq" style="background:${bgMap[c.quad]}">${qName}</span>
+        <span style="flex:1">${esc(c.text)}</span>
+      </div>`;
+    }).join('');
+
+    resultDiv.innerHTML=`<div class="pdf-result">
+      <div class="pr-title">📄 ${esc(file.name)} から ${classified.length}件を抽出</div>
+      ${previewHtml}
+      <div style="margin-top:10px;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="applyPdfTasks()">すべてタスクに追加</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('pdfResult').innerHTML=''">キャンセル</button>
+      </div>
+    </div>`;
+
+    window._pdfTasks=classified;
+  }catch(err){
+    resultDiv.innerHTML=`<div class="pdf-result"><div class="pr-title">⚠ PDF読み取りエラー</div><div style="font-size:12px;color:var(--danger);margin-top:4px">${esc(err.message||'不明なエラー')}</div></div>`;
+  }
+}
+
+function applyPdfTasks(){
+  if(!window._pdfTasks)return;
+  const today=new Date().toISOString().slice(0,10);
+  window._pdfTasks.forEach((t,i)=>{
+    tasks.unshift({
+      id:Date.now()+i, text:t.text, quad:t.quad, done:false,
+      due:today, repeat:'', priority:t.quad==='1'?'high':t.quad==='2'?'mid':'low',
+      created:new Date().toISOString()
+    });
+  });
+  save('tasks',tasks);renderTasks();
+  document.getElementById('pdfResult').innerHTML=`<div class="pdf-result"><div class="pr-title">✅ ${window._pdfTasks.length}件をタスクに追加しました</div></div>`;
+  setTimeout(()=>{document.getElementById('pdfResult').innerHTML=''},3000);
+  window._pdfTasks=null;
+}
+
+// Drag & Drop for PDF
+document.addEventListener('DOMContentLoaded',()=>{
+  const drop=document.getElementById('pdfDrop');
+  if(!drop)return;
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('dragover')}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('dragover')}));
+  drop.addEventListener('drop',e=>{
+    const file=e.dataTransfer.files[0];
+    if(file&&file.type==='application/pdf'){
+      const dt=new DataTransfer();dt.items.add(file);
+      document.getElementById('pdfImport').files=dt.files;
+      importPDF({target:document.getElementById('pdfImport')});
+    }
+  });
+});
 
 // === Init ===
 function init(){
