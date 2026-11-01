@@ -547,11 +547,13 @@ function renderWeeklySummary(){
     const accentC=s.getPropertyValue('--bg-header').trim()||'#1a2332';
     const warnC=s.getPropertyValue('--warn').trim()||'#d97706';
     const borderC=s.getPropertyValue('--border').trim()||'#d1d5db';
-    summaryChart=new Chart(ctx,{
-      type:'doughnut',
-      data:{labels:['完了','未完了'],datasets:[{data:[doneCount||0,notDoneCount||0],backgroundColor:[accentC,warnC],borderWidth:0}]},
-      options:{responsive:false,rotation:-90,circumference:180,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}
-    });
+    if(typeof Chart!=='undefined'){
+      summaryChart=new Chart(ctx,{
+        type:'doughnut',
+        data:{labels:['完了','未完了'],datasets:[{data:[doneCount||0,notDoneCount||0],backgroundColor:[accentC,warnC],borderWidth:0}]},
+        options:{responsive:false,rotation:-90,circumference:180,cutout:'70%',plugins:{legend:{display:false},tooltip:{enabled:false}}}
+      });
+    }
   }
 }
 
@@ -714,7 +716,7 @@ function renderExpenses(){
   const labels=Object.keys(cats),data=Object.values(cats);
   const colors=['#1a2332','#16a34a','#d97706','#c0392b','#8b5cf6','#06b6d4'];
   if(expChart)expChart.destroy();
-  if(labels.length>0){
+  if(labels.length>0&&typeof Chart!=='undefined'){
     expChart=new Chart(document.getElementById('expChart'),{
       type:'doughnut',
       data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderWidth:0}]},
@@ -793,7 +795,10 @@ function renderProjects(){
 const QUAD_NAMES={'1':'緊急×重要','2':'重要のみ','3':'緊急のみ','4':'どちらでもない'};
 const QUAD_COLORS={'1':'var(--q1)','2':'var(--q2)','3':'var(--q3)','4':'var(--q4)'};
 
+function checkXLSX(){if(typeof XLSX==='undefined'){alert('Excelライブラリが読み込めませんでした。ページを再読み込みしてください。');return false}return true}
+
 function exportExcel(){
+  if(!checkXLSX())return;
   const rows=tasks.map(t=>({
     タスク:t.text, 象限:QUAD_NAMES[t.quad]||'', 期限:t.due||'', 重要度:t.priority||'',
     完了:t.done?'○':'', 完了日:t.doneAt?t.doneAt.slice(0,10):'', 作成日:t.created?t.created.slice(0,10):''
@@ -806,6 +811,7 @@ function exportExcel(){
 }
 
 function exportCSV(){
+  if(!checkXLSX())return;
   const rows=tasks.map(t=>({
     タスク:t.text, 象限:QUAD_NAMES[t.quad]||'', 期限:t.due||'', 重要度:t.priority||'',
     完了:t.done?'○':'', 完了日:t.doneAt?t.doneAt.slice(0,10):'', 作成日:t.created?t.created.slice(0,10):''
@@ -822,6 +828,7 @@ function importFile(ev){
   const file=ev.target.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=function(e){
+    if(!checkXLSX())return;
     const data=new Uint8Array(e.target.result);
     const wb=XLSX.read(data,{type:'array'});
     const ws=wb.Sheets[wb.SheetNames[0]];
@@ -896,6 +903,7 @@ async function importPDF(ev){
 
   try{
     const arrayBuf=await file.arrayBuffer();
+    if(typeof pdfjsLib==='undefined'){resultDiv.innerHTML='<div class="pdf-result"><div class="pr-title">⚠ PDF.jsライブラリが読み込めませんでした</div></div>';return}
     pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     const pdf=await pdfjsLib.getDocument({data:arrayBuf}).promise;
     let fullText='';
