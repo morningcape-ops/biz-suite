@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務効率化スイート</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f3f4f6; --bg-card: #ffffff; --bg-header: #1e293b; --bg-header2: #334155;
+  --fg: #1e293b; --fg-muted: #64748b; --fg-inv: #f1f5f9;
+  --accent: #4f46e5; --accent-hover: #4338ca; --accent-light: #eef2ff;
+  --border: #e2e8f0; --success: #16a34a; --warn: #d97706; --danger: #dc2626;
+  --q1: #dc2626; --q2: #1e293b; --q3: #d97706; --q4: #64748b;
+  --font-body: 'Noto Sans JP', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 8px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f172a; --bg-card: #1e293b; --bg-header: #020617; --bg-header2: #0f172a;
+    --fg: #e2e8f0; --fg-muted: #94a3b8; --fg-inv: #0f172a;
+    --accent: #818cf8; --accent-hover: #6366f1; --accent-light: #1e1b4b;
+    --border: #334155; --success: #4ade80; --warn: #fbbf24; --danger: #f87171;
+    --q1: #f87171; --q2: #e2e8f0; --q3: #fbbf24; --q4: #94a3b8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f172a; --bg-card: #1e293b; --bg-header: #020617; --bg-header2: #0f172a;
+  --fg: #e2e8f0; --fg-muted: #94a3b8; --fg-inv: #0f172a;
+  --accent: #818cf8; --accent-hover: #6366f1; --accent-light: #1e1b4b;
+  --border: #334155; --success: #4ade80; --warn: #fbbf24; --danger: #f87171;
+  --q1: #f87171; --q2: #e2e8f0; --q3: #fbbf24; --q4: #94a3b8;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0 }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body);
+  font-size: 14px; line-height: 1.6; display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+* { box-sizing: border-box; margin: 0; padding: 0 }
+button { cursor: pointer; font-family: inherit; border: none; font-size: 13px }
+input, textarea, select { font-family: inherit; font-size: 13px; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; background: var(--bg-card); color: var(--fg); outline: none }
+input:focus, textarea:focus, select:focus { border-color: var(--accent) }
+textarea { resize: vertical }
+
+.header {
+  background: var(--bg-header); color: var(--fg-inv); padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.header-icon { background: var(--accent); color: #fff; font-weight: 700; font-size: 18px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0 }
+.header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.02em }
+
+.tab-bar {
+  background: var(--bg-header2); display: flex; gap: 4px; padding: 8px 16px; flex-shrink: 0;
+  overflow-x: auto;
+  margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.tab-btn { padding: 8px 16px; border-radius: 8px; font-weight: 500; font-size: 13px; white-space: nowrap; color: var(--fg-muted); background: transparent; transition: all .15s }
+.tab-btn:hover { background: rgba(255,255,255,.08); color: var(--fg-inv) }
+.tab-btn.active { background: var(--accent); color: #fff }
+
+.content { flex: 1; overflow-y: auto; padding: 16px 0 }
+.tab-panel { display: none }
+.tab-panel.active { display: block }
+
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px }
+.card-title { font-size: 13px; font-weight: 600; color: var(--fg-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .04em }
+.btn { padding: 8px 16px; border-radius: var(--radius); font-weight: 600; transition: all .15s }
+.btn-primary { background: var(--accent); color: #fff }
+.btn-primary:hover { background: var(--accent-hover) }
+.btn-sm { padding: 4px 10px; font-size: 12px }
+.btn-danger { background: var(--danger); color: #fff }
+.btn-ghost { background: transparent; color: var(--fg-muted); border: 1px solid var(--border) }
+.btn-ghost:hover { background: var(--accent-light); color: var(--accent) }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 8px; margin-bottom: 16px }
+.stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; text-align: center }
+.stat-val { font-size: 24px; font-weight: 700; font-family: var(--font-mono); color: var(--accent) }
+.stat-label { font-size: 11px; color: var(--fg-muted); margin-top: 2px }
+
+/* Eisenhower Matrix */
+.task-input-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px }
+.task-input-bar input[type="text"] { flex: 1; min-width: 180px }
+.task-input-bar input[type="date"] { width: 140px }
+.task-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px }
+.task-actions label { font-size: 12px; display: flex; align-items: center; gap: 4px; color: var(--fg-muted) }
+
+.matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+.quadrant { background: var(--bg-card); border: 2px solid var(--border); border-radius: var(--radius); padding: 16px; min-height: 160px }
+.quadrant[data-q="1"] { border-color: var(--q1) }
+.quadrant[data-q="2"] { border-color: var(--q2) }
+.quadrant[data-q="3"] { border-color: var(--q3) }
+.quadrant[data-q="4"] { border-color: var(--q4) }
+.q-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
+.q-title { font-size: 15px; font-weight: 700 }
+.q-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; color: #fff }
+.q-badge[data-q="1"] { background: var(--q1) }
+.q-badge[data-q="2"] { background: var(--q2) }
+.q-badge[data-q="3"] { background: var(--q3) }
+.q-badge[data-q="4"] { background: var(--q4) }
+.q-count { margin-left: auto; font-size: 13px; color: var(--fg-muted); font-family: var(--font-mono) }
+.q-desc { font-size: 11px; color: var(--fg-muted); margin-bottom: 10px }
+.q-list { display: flex; flex-direction: column; gap: 4px }
+
+.ti { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); font-size: 13px; transition: opacity .2s }
+.ti.done { opacity: .45 }
+.ti.done .ti-text { text-decoration: line-through }
+.ti-check { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0 }
+.ti-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ti-due { font-size: 11px; color: var(--fg-muted); font-family: var(--font-mono); flex-shrink: 0 }
+.ti-due.overdue { color: var(--danger); font-weight: 600 }
+.ti-del { background: none; color: var(--fg-muted); font-size: 14px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0 }
+.ti-del:hover { color: var(--danger); background: #fef2f2 }
+
+/* Pomodoro */
+.pomo-display { text-align: center; padding: 32px 0 }
+.pomo-time { font-size: 72px; font-weight: 700; font-family: var(--font-mono); letter-spacing: -2px; color: var(--accent) }
+.pomo-label { font-size: 14px; color: var(--fg-muted); margin-top: 4px }
+.pomo-btns { display: flex; gap: 8px; justify-content: center; margin-top: 20px }
+.pomo-progress { width: 100%; height: 6px; border-radius: 3px; background: var(--border); margin-top: 16px; overflow: hidden }
+.pomo-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .5s }
+.pomo-log { max-height: 200px; overflow-y: auto; margin-top: 12px }
+.pomo-log-item { font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between }
+
+/* Minutes */
+.min-entry { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; background: var(--bg-card) }
+.min-meta { font-size: 12px; color: var(--fg-muted); margin-bottom: 6px; display: flex; gap: 12px; flex-wrap: wrap }
+.min-content { white-space: pre-wrap; font-size: 13px; line-height: 1.7 }
+.min-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end }
+
+/* Expense */
+.exp-table { width: 100%; border-collapse: collapse; font-size: 13px }
+.exp-table th { text-align: left; padding: 8px; border-bottom: 2px solid var(--border); font-size: 12px; color: var(--fg-muted); font-weight: 600 }
+.exp-table td { padding: 8px; border-bottom: 1px solid var(--border) }
+.exp-table .amt { font-family: var(--font-mono); text-align: right; font-variant-numeric: tabular-nums }
+.chart-wrap { max-width: 300px; margin: 0 auto }
+.exp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px }
+
+@media (max-width: 640px) {
+  .matrix { grid-template-columns: 1fr }
+  .header h1 { font-size: 14px }
+  .pomo-time { font-size: 48px }
+  .stat-row { grid-template-columns: repeat(2,1fr) }
+  .exp-grid { grid-template-columns: 1fr }
+  .task-input-bar input[type="text"] { min-width: 0; width: 100% }
+}
+</style>
+
+
+</head>
+<body>
+<div class="header">
+  <div class="header-icon">業</div>
+  <h1>業務効率化スイート</h1>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="task" onclick="switchTab('task')">タスク</button>
+  <button class="tab-btn" data-tab="pomo" onclick="switchTab('pomo')">ポモドーロ</button>
+  <button class="tab-btn" data-tab="minutes" onclick="switchTab('minutes')">議事録</button>
+  <button class="tab-btn" data-tab="expense" onclick="switchTab('expense')">経費</button>
+</div>
+
+<div class="content">
+
+  <!-- ① タスク（アイゼンハワーマトリクス） -->
+  <div class="tab-panel active" id="panel-task">
+    <div class="task-input-bar">
+      <input type="text" id="taskInput" placeholder="タスクを入力（例：見積書の送付）">
+      <input type="date" id="taskDue">
+      <select id="taskRepeat">
+        <option value="">繰り返しなし</option>
+        <option value="daily">毎日</option>
+        <option value="weekly">毎週</option>
+        <option value="monthly">毎月</option>
+      </select>
+      <select id="taskQuad">
+        <option value="1">緊急 × 重要</option>
+        <option value="2">重要のみ</option>
+        <option value="3">緊急のみ</option>
+        <option value="4">どちらでもない</option>
+      </select>
+      <button class="btn btn-primary" onclick="addTask()">追加</button>
+    </div>
+    <div class="task-actions">
+      <label><input type="checkbox" id="hideDone" onchange="renderTasks()"> 完了タスクを隠す</label>
+      <button class="btn btn-sm btn-ghost" onclick="clearDone()">完了タスクを一括削除</button>
+      <button class="btn btn-sm btn-ghost" onclick="clearAll()">すべて削除</button>
+    </div>
+    <div class="matrix" id="matrix">
+      <div class="quadrant" data-q="1">
+        <div class="q-header"><span class="q-title">今すぐやる</span><span class="q-badge" data-q="1">緊急 × 重要</span><span class="q-count" id="qc1"></span></div>
+        <div class="q-desc">締切間近・トラブル対応など</div>
+        <div class="q-list" id="ql1"></div>
+      </div>
+      <div class="quadrant" data-q="2">
+        <div class="q-header"><span class="q-title">計画してやる</span><span class="q-badge" data-q="2">重要のみ</span><span class="q-count" id="qc2"></span></div>
+        <div class="q-desc">戦略・改善・学習など</div>
+        <div class="q-list" id="ql2"></div>
+      </div>
+      <div class="quadrant" data-q="3">
+        <div class="q-header"><span class="q-title">任せる・短時間で</span><span class="q-badge" data-q="3">緊急のみ</span><span class="q-count" id="qc3"></span></div>
+        <div class="q-desc">メール返信・電話対応など</div>
+        <div class="q-list" id="ql3"></div>
+      </div>
+      <div class="quadrant" data-q="4">
+        <div class="q-header"><span class="q-title">やらない・減らす</span><span class="q-badge" data-q="4">どちらでもない</span><span class="q-count" id="qc4"></span></div>
+        <div class="q-desc">惰性の作業・過度な確認など</div>
+        <div class="q-list" id="ql4"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② ポモドーロ -->
+  <div class="tab-panel" id="panel-pomo">
+    <div class="card">
+      <div class="pomo-display">
+        <div class="pomo-time" id="pomoTime">25:00</div>
+        <div class="pomo-label" id="pomoLabel">作業時間</div>
+        <div class="pomo-progress"><div class="pomo-fill" id="pomoFill" style="width:0%"></div></div>
+        <div class="pomo-btns">
+          <button class="btn btn-primary" id="pomoStartBtn" onclick="pomoToggle()">開始</button>
+          <button class="btn btn-ghost" onclick="pomoReset()">リセット</button>
+        </div>
+      </div>
+    </div>
+    <div class="stat-row" id="pomoStats"></div>
+    <div class="card">
+      <div class="card-title">設定</div>
+      <div class="row">
+        <label style="font-size:12px">作業 <input type="number" id="pomoWork" value="25" min="1" max="120" style="width:60px"> 分</label>
+        <label style="font-size:12px">休憩 <input type="number" id="pomoBreak" value="5" min="1" max="30" style="width:60px"> 分</label>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">本日の記録</div>
+      <div class="pomo-log" id="pomoLog"></div>
+    </div>
+  </div>
+
+  <!-- ③ 議事録 -->
+  <div class="tab-panel" id="panel-minutes">
+    <div class="card">
+      <div class="card-title">新しい議事録</div>
+      <div style="display:grid;gap:8px">
+        <div class="row">
+          <input type="text" id="minTitle" placeholder="会議名" style="flex:1;min-width:0">
+          <input type="date" id="minDate" style="width:140px">
+        </div>
+        <input type="text" id="minAttendees" placeholder="出席者（カンマ区切り）">
+        <textarea id="minContent" rows="5" placeholder="議事内容を入力..." style="width:100%"></textarea>
+        <div><button class="btn btn-primary" onclick="addMinutes()">保存</button></div>
+      </div>
+    </div>
+    <div id="minutesList"></div>
+  </div>
+
+  <!-- ④ 経費管理 -->
+  <div class="tab-panel" id="panel-expense">
+    <div class="stat-row" id="expStats"></div>
+    <div class="card">
+      <div class="card-title">経費追加</div>
+      <div class="row">
+        <input type="date" id="expDate" style="width:130px">
+        <select id="expCategory"><option>交通費</option><option>消耗品</option><option>通信費</option><option>会議費</option><option>雑費</option></select>
+        <input type="number" id="expAmount" placeholder="金額" style="width:100px">
+        <input type="text" id="expNote" placeholder="備考" style="flex:1;min-width:0">
+        <button class="btn btn-primary" onclick="addExpense()">追加</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exp-grid">
+        <div>
+          <div class="card-title">明細</div>
+          <div style="overflow-x:auto"><table class="exp-table">
+            <thead><tr><th>日付</th><th>分類</th><th>金額</th><th>備考</th><th></th></tr></thead>
+            <tbody id="expBody"></tbody>
+          </table></div>
+        </div>
+        <div>
+          <div class="card-title">分類別</div>
+          <div class="chart-wrap"><canvas id="expChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function load(k,d){try{const v=localStorage.getItem('biz_'+k);return v?JSON.parse(v):d}catch{return d}}
+function save(k,v){try{localStorage.setItem('biz_'+k,JSON.stringify(v))}catch{}}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+let currentTab='task';
+try{const s=localStorage.getItem('biz_tab');if(s)currentTab=s}catch{}
+function switchTab(t){
+  currentTab=t;
+  try{localStorage.setItem('biz_tab',t)}catch{}
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='panel-'+t));
+}
+
+// === ① Tasks (Eisenhower) ===
+let tasks=load('tasks',[]);
+
+function addTask(){
+  const input=document.getElementById('taskInput');
+  const text=input.value.trim();
+  if(!text)return;
+  tasks.unshift({
+    id:Date.now(), text, done:false,
+    quad:document.getElementById('taskQuad').value,
+    due:document.getElementById('taskDue').value,
+    repeat:document.getElementById('taskRepeat').value,
+    created:new Date().toISOString()
+  });
+  save('tasks',tasks);
+  input.value='';
+  renderTasks();
+}
+
+function toggleTask(id){
+  const t=tasks.find(t=>t.id===id);
+  if(t)t.done=!t.done;
+  save('tasks',tasks);
+  renderTasks();
+}
+
+function deleteTask(id){
+  tasks=tasks.filter(t=>t.id!==id);
+  save('tasks',tasks);
+  renderTasks();
+}
+
+function moveTask(id,q){
+  const t=tasks.find(t=>t.id===id);
+  if(t)t.quad=q;
+  save('tasks',tasks);
+  renderTasks();
+}
+
+function clearDone(){
+  tasks=tasks.filter(t=>!t.done);
+  save('tasks',tasks);
+  renderTasks();
+}
+
+function clearAll(){
+  tasks=[];
+  save('tasks',tasks);
+  renderTasks();
+}
+
+function renderTasks(){
+  const today=new Date().toISOString().slice(0,10);
+  const hideDone=document.getElementById('hideDone').checked;
+
+  for(let q=1;q<=4;q++){
+    const items=tasks.filter(t=>t.quad==q&&(!hideDone||!t.done));
+    const total=tasks.filter(t=>t.quad==q).length;
+    document.getElementById('qc'+q).textContent=total+'件';
+    document.getElementById('ql'+q).innerHTML=items.map(t=>{
+      const overdue=t.due&&!t.done&&t.due<today;
+      return `<div class="ti ${t.done?'done':''}">
+        <input type="checkbox" class="ti-check" ${t.done?'checked':''} onchange="toggleTask(${t.id})">
+        <span class="ti-text">${esc(t.text)}</span>
+        ${t.due?`<span class="ti-due ${overdue?'overdue':''}">${t.due}</span>`:''}
+        <button class="ti-del" onclick="deleteTask(${t.id})" title="削除">&times;</button>
+      </div>`
+    }).join('');
+  }
+}
+
+document.getElementById('taskInput').addEventListener('keydown',e=>{if(e.key==='Enter')addTask()});
+
+// === ② Pomodoro ===
+let pomo={running:false,isBreak:false,remaining:25*60,total:25*60,iid:null};
+let pomoSes=load('pomo_today',{date:new Date().toISOString().slice(0,10),count:0,totalMin:0,log:[]});
+
+function pomoCheckDate(){
+  const today=new Date().toISOString().slice(0,10);
+  if(pomoSes.date!==today){pomoSes={date:today,count:0,totalMin:0,log:[]};save('pomo_today',pomoSes)}
+}
+
+function pomoToggle(){
+  if(pomo.running){
+    clearInterval(pomo.iid);pomo.running=false;
+    document.getElementById('pomoStartBtn').textContent='再開';
+  }else{
+    pomo.running=true;
+    document.getElementById('pomoStartBtn').textContent='一時停止';
+    pomo.iid=setInterval(pomoTick,1000);
+  }
+}
+
+function pomoTick(){
+  pomo.remaining--;
+  if(pomo.remaining<=0){
+    clearInterval(pomo.iid);pomo.running=false;
+    if(!pomo.isBreak){
+      pomoCheckDate();
+      const wm=parseInt(document.getElementById('pomoWork').value)||25;
+      pomoSes.count++;pomoSes.totalMin+=wm;
+      pomoSes.log.push({time:new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}),min:wm});
+      save('pomo_today',pomoSes);
+      pomo.isBreak=true;
+      const bm=parseInt(document.getElementById('pomoBreak').value)||5;
+      pomo.remaining=bm*60;pomo.total=bm*60;
+    }else{
+      pomo.isBreak=false;
+      const wm=parseInt(document.getElementById('pomoWork').value)||25;
+      pomo.remaining=wm*60;pomo.total=wm*60;
+    }
+    document.getElementById('pomoStartBtn').textContent='開始';
+  }
+  renderPomo();
+}
+
+function pomoReset(){
+  clearInterval(pomo.iid);pomo.running=false;pomo.isBreak=false;
+  const wm=parseInt(document.getElementById('pomoWork').value)||25;
+  pomo.remaining=wm*60;pomo.total=wm*60;
+  document.getElementById('pomoStartBtn').textContent='開始';
+  renderPomo();
+}
+
+function renderPomo(){
+  const m=Math.floor(pomo.remaining/60),s=pomo.remaining%60;
+  document.getElementById('pomoTime').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('pomoLabel').textContent=pomo.isBreak?'休憩時間':'作業時間';
+  const pct=pomo.total>0?((pomo.total-pomo.remaining)/pomo.total*100):0;
+  document.getElementById('pomoFill').style.width=pct+'%';
+  pomoCheckDate();
+  document.getElementById('pomoStats').innerHTML=`
+    <div class="stat"><div class="stat-val">${pomoSes.count}</div><div class="stat-label">完了セッション</div></div>
+    <div class="stat"><div class="stat-val">${pomoSes.totalMin}</div><div class="stat-label">合計(分)</div></div>`;
+  document.getElementById('pomoLog').innerHTML=pomoSes.log.map(l=>
+    `<div class="pomo-log-item"><span>${l.time}</span><span>${l.min}分</span></div>`
+  ).reverse().join('');
+}
+
+// === ③ Minutes ===
+let minutes=load('minutes',[]);
+
+function addMinutes(){
+  const title=document.getElementById('minTitle').value.trim();
+  const content=document.getElementById('minContent').value.trim();
+  if(!title&&!content)return;
+  minutes.unshift({
+    id:Date.now(),title:title||'無題',
+    date:document.getElementById('minDate').value||new Date().toISOString().slice(0,10),
+    attendees:document.getElementById('minAttendees').value.trim(),
+    content,created:new Date().toISOString()
+  });
+  save('minutes',minutes);
+  document.getElementById('minTitle').value='';
+  document.getElementById('minContent').value='';
+  document.getElementById('minAttendees').value='';
+  renderMinutes();
+}
+
+function deleteMinutes(id){minutes=minutes.filter(m=>m.id!==id);save('minutes',minutes);renderMinutes()}
+
+function renderMinutes(){
+  document.getElementById('minutesList').innerHTML=minutes.map(m=>`
+    <div class="min-entry">
+      <div style="font-weight:600;margin-bottom:4px">${esc(m.title)}</div>
+      <div class="min-meta"><span>${m.date}</span>${m.attendees?`<span>${esc(m.attendees)}</span>`:''}</div>
+      <div class="min-content">${esc(m.content)}</div>
+      <div class="min-actions">
+        <button class="btn btn-sm btn-ghost" onclick="copyMin(${m.id})">コピー</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteMinutes(${m.id})">削除</button>
+      </div>
+    </div>`).join('');
+}
+
+function copyMin(id){
+  const m=minutes.find(x=>x.id===id);if(!m)return;
+  navigator.clipboard.writeText(`【${m.title}】\n日付: ${m.date}\n出席: ${m.attendees}\n\n${m.content}`).catch(()=>{});
+}
+
+// === ④ Expenses ===
+let expenses=load('expenses',[]);
+let expChart=null;
+
+function addExpense(){
+  const amount=parseFloat(document.getElementById('expAmount').value);
+  if(!amount)return;
+  expenses.unshift({
+    id:Date.now(),
+    date:document.getElementById('expDate').value||new Date().toISOString().slice(0,10),
+    category:document.getElementById('expCategory').value,
+    amount,note:document.getElementById('expNote').value.trim()
+  });
+  save('expenses',expenses);
+  document.getElementById('expAmount').value='';
+  document.getElementById('expNote').value='';
+  renderExpenses();
+}
+
+function deleteExpense(id){expenses=expenses.filter(e=>e.id!==id);save('expenses',expenses);renderExpenses()}
+
+function renderExpenses(){
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const me=expenses.filter(e=>e.date.startsWith(thisMonth));
+  const total=me.reduce((s,e)=>s+e.amount,0);
+  const cats={};
+  me.forEach(e=>{cats[e.category]=(cats[e.category]||0)+e.amount});
+
+  document.getElementById('expStats').innerHTML=`
+    <div class="stat"><div class="stat-val">&yen;${total.toLocaleString()}</div><div class="stat-label">今月合計</div></div>
+    <div class="stat"><div class="stat-val">${me.length}</div><div class="stat-label">件数</div></div>
+    <div class="stat"><div class="stat-val">${Object.keys(cats).length}</div><div class="stat-label">分類数</div></div>`;
+
+  document.getElementById('expBody').innerHTML=expenses.slice(0,30).map(e=>`
+    <tr>
+      <td style="font-family:var(--font-mono);font-size:12px">${e.date}</td>
+      <td>${esc(e.category)}</td>
+      <td class="amt">&yen;${e.amount.toLocaleString()}</td>
+      <td>${esc(e.note)}</td>
+      <td><button class="ti-del" onclick="deleteExpense(${e.id})">&times;</button></td>
+    </tr>`).join('');
+
+  const labels=Object.keys(cats),data=Object.values(cats);
+  const colors=['#4f46e5','#16a34a','#d97706','#dc2626','#8b5cf6','#06b6d4'];
+  if(expChart)expChart.destroy();
+  if(labels.length>0){
+    expChart=new Chart(document.getElementById('expChart'),{
+      type:'doughnut',
+      data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderWidth:0}]},
+      options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:getComputedStyle(document.body).getPropertyValue('--fg').trim(),font:{size:11}}}}}
+    });
+  }
+}
+
+// === Init ===
+function init(){
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('taskDue').value=today;
+  document.getElementById('minDate').value=today;
+  document.getElementById('expDate').value=today;
+  switchTab(currentTab);
+  renderTasks();renderPomo();renderMinutes();renderExpenses();
+}
+init();
+</script>
+</body>
+</html>
